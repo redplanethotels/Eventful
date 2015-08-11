@@ -11,7 +11,7 @@ class Eventful
      *
      * @var string
      */
-    protected $apiRoot = 'http://api.eventful.com';
+    protected $apiRoot = 'https://api.eventful.com';
 
     /**
      * Application key.
@@ -25,7 +25,7 @@ class Eventful
      *
      * @var string
      */
-    private $user = null;
+    private $username = null;
 
     /**
      * User Authentication Key.
@@ -39,7 +39,14 @@ class Eventful
      *
      * @var string
      */
-    private $requestUri = null;
+    protected $requestUri = null;
+
+    /**
+     * Latest request parameters.
+     *
+     * @var string
+     */
+    protected $requestParameters = null;
 
     /**
      * Latest response data.
@@ -60,7 +67,7 @@ class Eventful
      *
      * @var string
      */
-    protected $responseCode = null;
+    private $responseCode = null;
 
     /**
      * Create a new client.
@@ -82,7 +89,7 @@ class Eventful
      */
     public function login($username, $password)
     {
-        $this->user = $username;
+        $this->username = $username;
 
         $result = $this->call('users/login', [], 'json');
         if (isset($result->nonce)) {
@@ -121,7 +128,7 @@ class Eventful
 
         $postArgs = [
             'appKey'  => $this->appKey,
-            'user'    => $this->user,
+            'user'    => $this->username,
             'userKey' => $this->userKey,
         ];
 
@@ -134,6 +141,8 @@ class Eventful
                 $postArgs[$argKey] = $argValue;
             }
         }
+
+        $this->requestParameters = $postArgs;
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->requestUri);
