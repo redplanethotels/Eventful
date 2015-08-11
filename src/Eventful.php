@@ -28,13 +28,6 @@ class Eventful
     private $user = null;
 
     /**
-     * Password.
-     *
-     * @var string
-     */
-    private $password = null;
-
-    /**
      * User Authentication Key.
      *
      * @var string
@@ -56,6 +49,20 @@ class Eventful
     protected $responseData = null;
 
     /**
+     * Latest response error message.
+     *
+     * @var string
+     */
+    protected $responseError = null;
+
+    /**
+     * Latest response code.
+     *
+     * @var string
+     */
+    protected $responseCode = null;
+
+    /**
      * Create a new client.
      *
      * @param string $appKey
@@ -68,46 +75,48 @@ class Eventful
     /**
      * Login and verify the user connection.
      *
-     * @param string $user
-     * @param string $pass
+     * @param string $username
+     * @param string $password
      *
      * @return bool
      */
-    public function login($user, $password)
+    public function login($username, $password)
     {
-        $this->user = $user;
+        $this->user = $username;
 
-        $this->call('users/login', []);
-        $data = $this->responseData;
-        $nonce = $data['nonce'];
+        $result = $this->call('users/login', [], 'json');
+        if (isset($result->nonce)) {
+            $nonce = $result->nonce;
 
-        $response = md5($nonce.':'.md5($password));
+            $response = md5($nonce . ':' . md5($password));
+            $args = [
+                'nonce'    => $nonce,
+                'response' => $response,
+            ];
+            $result = $this->call('users/login', $args, 'json');
 
-        $args = [
-            'nonce'    => $nonce,
-            'response' => $response,
-        ];
-
-        $r = $this->call('users/login', $args);
-
-        $this->userKey = (string) $r->userKey;
-
-        return true;
+            if (isset($result->userKey)) {
+                $this->userKey = $result->userKey;
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * Call a method of the Eventful API.
      *
      * @param string $method
-     * @param mixed  $arguments
+     * @param mixed  $args
+     * @param string $output
      *
-     * @return SimpleXMLElement
+     * @return mixed;
      */
-    public function call($method, $args = [])
+    public function call($method, $args = [], $output = 'rest')
     {
         $method = trim($method, '/ ');
 
-        $url = $this->apiRoot.'/rest/'.$method;
+        $url = $this->apiRoot . '/' . $output . '/' . $method;
         $this->requestUri = $url;
 
         $postArgs = [
@@ -126,18 +135,10 @@ class Eventful
             }
         }
 
-        $fieldsString = '';
-
-        foreach ($postArgs as $argKey => $argValue) {
-            $fieldsString .= $key.'='.urlencode($argValue).'&';
-        }
-
-        $fieldsString = rtrim($fieldsString, '&');
-
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->requestUri);
         curl_setopt($ch, CURLOPT_POST, count($postArgs));
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $fieldsString);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postArgs));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Return data instead of display to std out
 
         $cResult = curl_exec($ch);
@@ -145,16 +146,25 @@ class Eventful
 
         curl_close($ch);
 
-        // Process result to XML
-        $data = new SimpleXMLElement($cResult);
+        $data = false;
 
-        if ($data->getName() === 'error') {
-            $error = $data['string'].': '.$data->description;
-            $code = $data['string'];
-
-            return false;
+        if ($output == 'rest') {
+            // Process result to XML
+            $data = new SimpleXMLElement($cResult);
+            if ($data->getName() === 'error') {
+                $this->responseError = $data['string'] . ': ' . $data->description;
+                $this->responseCode = $data['string'];
+                return false;
+            }
+        } elseif ($output == 'json') {
+            // Process result to stdClass
+            $data = json_decode($cResult);
+            if (isset($data->error)) {
+                $this->responseError = $data->status . ': ' . $data->description;
+                $this->responseCode = $data->error;
+                return false;
+            }
         }
-
         return $data;
     }
 }
