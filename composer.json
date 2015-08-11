@@ -1,6 +1,6 @@
 {
-    "name": "bluebaytravel/eventful",
-    "description": "Eventful.com wrapper.",
+    "name": "redplanethotels/eventful",
+    "description": "Eventful.com wrapper fork from bluebaytravel/eventful",
     "keywords": ["eventful", "api"],
     "license": "MIT",
     "authors": [
