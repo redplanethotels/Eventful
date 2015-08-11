@@ -39,28 +39,28 @@ class Eventful
      *
      * @var string
      */
-    protected $requestUri = null;
+    private $requestUri = null;
 
     /**
      * Latest request parameters.
      *
      * @var string
      */
-    protected $requestParameters = null;
+    private $requestParameters = null;
 
     /**
      * Latest response data.
      *
      * @var string
      */
-    protected $responseData = null;
+    private $responseData = null;
 
     /**
      * Latest response error message.
      *
      * @var string
      */
-    protected $responseError = null;
+    private $responseError = null;
 
     /**
      * Latest response code.
@@ -77,6 +77,36 @@ class Eventful
     public function __construct($appKey)
     {
         $this->appKey = $appKey;
+    }
+
+    public function getUserKey()
+    {
+        return $this->userKey;
+    }
+
+    public function getRequestUri()
+    {
+        return $this->requestUri;
+    }
+
+    public function getRequestParameters()
+    {
+        return $this->requestParameters;
+    }
+
+    public function getResponseData()
+    {
+        return $this->responseData;
+    }
+
+    public function getResponseError()
+    {
+        return $this->responseError;
+    }
+
+    public function getResponseCode()
+    {
+        return $this->responseCode;
     }
 
     /**
@@ -119,7 +149,7 @@ class Eventful
      *
      * @return mixed;
      */
-    public function call($method, $args = [], $output = 'rest')
+    public function call($method, $args = [], $output = 'json')
     {
         $method = trim($method, '/ ');
 
