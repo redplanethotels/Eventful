@@ -11,7 +11,7 @@ class Eventful
      *
      * @var string
      */
-    protected $apiRoot = 'https://api.eventful.com';
+    protected $apiRoot = 'http://api.eventful.com';
 
     /**
      * Application key.
@@ -125,11 +125,13 @@ class Eventful
         if (isset($result->nonce)) {
             $nonce = $result->nonce;
 
-            $response = md5($nonce . ':' . md5($password));
+            $login_hash = md5($nonce . ':' . md5($password));
+
             $args = [
                 'nonce'    => $nonce,
-                'response' => $response,
+                'response' => $login_hash,
             ];
+
             $result = $this->call('users/login', $args, 'json');
 
             if (isset($result->userKey)) {
@@ -138,6 +140,19 @@ class Eventful
             }
         }
         return false;
+    }
+
+    public function addDefaultParameters($parameters = [])
+    {
+        $default = [
+            'app_key'  => $this->appKey,
+            'user'     => $this->username,
+            'user_key' => $this->userKey,
+        ];
+        foreach ($default as $key => $value) {
+            $parameters[$key] = $value;
+        }
+        return $parameters;
     }
 
     /**
@@ -156,11 +171,7 @@ class Eventful
         $url = $this->apiRoot . '/' . $output . '/' . $method;
         $this->requestUri = $url;
 
-        $postArgs = [
-            'appKey'  => $this->appKey,
-            'user'    => $this->username,
-            'userKey' => $this->userKey,
-        ];
+        $postArgs = [];
 
         foreach ($args as $argKey => $argValue) {
             if (is_array($argValue)) {
@@ -172,6 +183,8 @@ class Eventful
             }
         }
 
+        $postArgs = $this->addDefaultParameters($postArgs);
+
         $this->requestParameters = $postArgs;
 
         $ch = curl_init();
@@ -181,8 +194,13 @@ class Eventful
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Return data instead of display to std out
 
         $cResult = curl_exec($ch);
-        $this->responseData = $cResult;
+        if (false === $cResult) {
+            $this->responseError = curl_error($ch);
+            $this->responseCode = curl_errno($ch);
+            return false;
+        }
 
+        $this->responseData = $cResult;
         curl_close($ch);
 
         $data = false;
